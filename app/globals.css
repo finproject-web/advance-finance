@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #1f2937;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-gradient {
+  background: #ffffff;
+}
+
+.section-gradient {
+  background: #f5f5f0;
+}
+
+.cta-gradient {
+  background: #0f1f3d;
+}
+
+.howitworks-bg {
+  background: #0f1f3d;
+}
+
+.stats-bg {
+  background: #E8521A;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

